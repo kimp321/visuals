@@ -1,0 +1,162 @@
+---
+title: "2019_Visuals"
+author: "kimp"
+date: "2/8/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r message=FALSE}
+library(gdata)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggthemes)
+library(plotly)
+library(DT)
+```
+
+```{r Read Data}
+# 2019.xlsx
+# Sheet 1 = January
+# Sheet 2 = February
+# etc.
+
+# read in data (modify sheet parameter as desired)
+all_data <-  read.xls("2019.xlsx", sheet=6)
+mydata <- all_data[,1:5]  # select columns 1 to 5
+```
+
+```{r Combine Data, eval=FALSE}
+all_data <-  read.xls("2019.xlsx", sheet=1)
+mydata <- all_data[,1:5]  # select columns 1 to 5
+
+all_data <-  read.xls("2019.xlsx", sheet=2)
+all_data <- all_data[,1:5]  # select columns 1 to 5
+mydata <- rbind(mydata,all_data)
+
+all_data <-  read.xls("2019.xlsx", sheet=3)
+all_data <- all_data[,1:5]  # select columns 1 to 5
+mydata <- rbind(mydata,all_data)
+
+all_data <-  read.xls("2019.xlsx", sheet=4)
+all_data <- all_data[,1:5]  # select columns 1 to 5
+mydata <- rbind(mydata,all_data)
+
+all_data <-  read.xls("2019.xlsx", sheet=5)
+all_data <- all_data[,1:5]  # select columns 1 to 5
+mydata <- rbind(mydata,all_data)
+
+all_data <-  read.xls("2019.xlsx", sheet=6)
+all_data <- all_data[,1:5]  # select columns 1 to 5
+mydata <- rbind(mydata,all_data)
+```
+
+```{r Data Details, eval=FALSE}
+dim(mydata) # display data dimensions
+head(mydata) # show first 5 columns
+colnames(mydata) # list column names
+levels(mydata$Type) # list Type levels to help with filtering
+```
+
+## 1. Quick Summary Output
+```{r Summary Output}
+income <- mydata %>% filter(Type =="Income") %>% select(Amount) %>% sum()
+rent <- mydata %>% filter(Category =="Rent") %>% select(Amount) %>% sum()
+spent <- mydata %>% filter(Type == "Sale" | Type =="Return") %>% select(Amount) %>% sum()
+savings <- round(sum(income, rent, spent),2)
+
+cat("For this month, you...", "\n",
+    "made: ", income, "\n",
+    "paid rent: ", rent, "\n",
+    "spent: ", spent, "\n",
+    "saved: ", savings
+    )
+```
+
+```{r Summary Output Optional, eval=FALSE}
+df_summary <- mydata %>% select(Category, Type, Amount) %>% group_by(Type) %>% summarise(sum=sum(Amount))
+datatable(df_summary)
+```
+
+## 2. Visualizations
+### Spending by Category
+```{r Spending by Category}
+# Visualize Total Spending by Category
+mydata2 <- group_by(mydata, Category) %>% mutate(sum(Amount))
+mydata2 <- rename(mydata2, "AmountCategory" = "sum(Amount)")
+
+ggplot(subset(mydata2, Type != "Income") %>% select(Category, AmountCategory) %>% unique()) +
+ geom_bar(aes(x=reorder(Category,-AmountCategory), y=AmountCategory*-1, fill=Category), stat="identity") + 
+  theme(axis.text.x = element_text(angle = 40, hjust = 1)) +
+  geom_text(aes(x=Category, y=(AmountCategory*-1)+20, label=AmountCategory*-1)) +
+  coord_flip() +
+  guides(fill = FALSE) + ggtitle("Total Spending by Category") + xlab("Category") + ylab("Amount ($)")
+
+# Visualize Breakdown of Total Spending by Category 
+p <- ggplot(subset(mydata2, Type != "Income")) +
+  geom_bar(aes(x=reorder(Category,AmountCategory), y=Amount*-1, fill=Description), stat="identity") + 
+  guides(fill = FALSE) + 
+  theme(axis.text.x = element_text(angle = 40, hjust = 1)) +
+  coord_flip() + 
+  ggtitle("Catgory Breakdown") + xlab("Category") + ylab("Amount ($)")
+p2 <- ggplotly(p)
+hide_legend(p2)
+```
+
+### Income Payments by Company
+```{r Total Income Payments by Company}
+# Visualize Income Payments and Total Income by Company
+income2 <- filter(mydata, Type=="Income")
+income2 <- group_by(income2, Category) %>% mutate(sum(Amount))
+income2 <- rename(income2, "AmountCompany" = "sum(Amount)")
+
+ggplot(data=income2 %>% select(Category, Amount, AmountCompany)) +
+  geom_bar(aes(x=reorder(Category, -Amount), y=Amount, fill=Category), stat="identity") +
+  geom_text(aes(x=Category, y=Amount+20, label=Amount)) +
+  geom_text(aes(x=Category, y=AmountCompany+100, label=AmountCompany)) +
+  ggtitle("Total Income Payments by Company") + xlab("Company") + ylab("Amount ($)")
+```
+
+### Income Payments by Company Over Time
+```{r Total Income Payments by Company Over Time}
+# Visualize Income Payments Over Time by Company
+ggplot(data=income2, aes(x=Post.Date, y=Amount, color=Category, group=Category)) +
+  geom_point() +
+  geom_line() +
+  ggtitle("Income Payments Over Time by Company") + xlab("Company") + ylab("Amount ($)")
+```
+
+### Spending by Type
+```{r Income vs Rent vs Sale vs Saved}
+# Create dataframe with Total Amount and Type (e.g. Income, Rent, Saved, Sale)
+data_summary <- data.frame("Type" = c("Income", "Rent", "Sale", "Saved"),
+                      "TotalAmount" = c(income, rent, spent, savings))
+
+# Visualize Income, Rent, Sale, Saved
+ggplot(data=data_summary) + 
+  geom_bar(aes(x=Type, y=abs(TotalAmount), fill=Type), stat="identity") +
+  geom_text(aes(x=Type, y=abs(TotalAmount) + 100), label=data_summary$TotalAmount) +
+  ggtitle("Total Amount by Type") + xlab("Type") + ylab("Amount ($)")
+
+# Change Rent Type to Sale Type
+data_summary$Type2 <- ifelse(data_summary$Type=="Income", "Income", 
+                                 ifelse(data_summary$Type=="Saved", "Saved",
+                                 "Sale"))
+# Visualize Income, Rent + Sale, Saved
+ggplot(data=data_summary) + 
+  geom_bar(aes(x=Type2, y=abs(TotalAmount), fill=Type2), stat="identity") +
+  annotate(geom = 'text', label = income, x = "Income", y = income+100) +
+  annotate(geom = 'text', label = round(sum(rent, spent),2), x = "Sale", y = abs(round(sum(rent,spent),2)-100)) +
+  annotate(geom = 'text', label = savings, x = "Saved", y = savings+100) +
+  ggtitle("Total Amount by Type (Rent and Sale combined)") + xlab("Type") + ylab("Amount ($)") + labs(fill="Type")
+```
+
+## 3. View Data 
+```{r}
+datatable(mydata, options = list(pageLength = 10))
+```
+
