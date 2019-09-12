@@ -19,7 +19,7 @@ library(plotly)
 library(DT)
 ```
 
-```{r Read Data, eval=FALSE}
+```{r individual sheet, eval=FALSE}
 # 2019.xlsx
 # Sheet 1 = January
 # Sheet 2 = February
@@ -30,42 +30,25 @@ all_data <-  read.xls("2019.xlsx", sheet=7)
 mydata <- all_data[,1:5]  # select columns 1 to 5
 ```
 
-```{r Combine Data}
-all_data <-  read.xls("2019.xlsx", sheet=1)
-mydata <- all_data[,1:5]  # select columns 1 to 5
+```{r combine sheet}
+get_sheets <- function(x,y){
+  sheet_names <- readxl::excel_sheets("2019.xlsx")
+  sheet_list <- lapply(sheet_names[x:y], function(.sheet){gdata::read.xls("2019.xlsx", .sheet)})
+  sheet_list <- lapply(sheet_list, `[`, 1:5)
+  mydata <- data.table::rbindlist(sheet_list)
+  mydata
+}
 
-all_data <-  read.xls("2019.xlsx", sheet=2)
-all_data <- all_data[,1:5]  # select columns 1 to 5
-mydata <- rbind(mydata,all_data)
-
-all_data <-  read.xls("2019.xlsx", sheet=3)
-all_data <- all_data[,1:5]  # select columns 1 to 5
-mydata <- rbind(mydata,all_data)
-
-all_data <-  read.xls("2019.xlsx", sheet=4)
-all_data <- all_data[,1:5]  # select columns 1 to 5
-mydata <- rbind(mydata,all_data)
-
-all_data <-  read.xls("2019.xlsx", sheet=5)
-all_data <- all_data[,1:5]  # select columns 1 to 5
-mydata <- rbind(mydata,all_data)
-
-all_data <-  read.xls("2019.xlsx", sheet=6)
-all_data <- all_data[,1:5]  # select columns 1 to 5
-mydata <- rbind(mydata,all_data)
-
-all_data <-  read.xls("2019.xlsx", sheet=7)
-all_data <- all_data[,1:5]  # select columns 1 to 5
-mydata <- rbind(mydata,all_data)
-
-saveRDS(mydata, file = "alldata_2019")
+mydata <- get_sheets(1,7)
+# saveRDS(mydata, file = "alldata_2019")
 ```
 
 ```{r Data Details, eval=FALSE}
-dim(mydata) # display data dimensions
-head(mydata) # show first 5 columns
-colnames(mydata) # list column names
-levels(mydata$Type) # list Type levels to help with filtering
+dim(mydata)
+head(mydata)
+colnames(mydata) 
+levels(mydata$Type) 
+levels(mydata$Category) 
 ```
 
 ## 1. Quick Summary Output
@@ -82,6 +65,19 @@ cat("You...", "\n",
     "paid rent: ", rent
     )
 ```
+
+```{r}
+# Pie Chart with Percentages
+slices <- c(rent+spent,savings)
+lbls <- c("spent", "saved")
+pct <- round(abs(slices)/sum(abs(slices))*100)
+lbls <- paste(lbls, pct) # add percents to labels
+lbls <- paste(lbls,"%",sep="") # ad % to labels
+pie(abs(slices),labels = lbls, col=rainbow(length(lbls)),
+   main="% Income Saved") 
+```
+
+
 
 ```{r Summary Output Optional, eval=FALSE}
 df_summary <- mydata %>% select(Category, Type, Amount) %>% group_by(Type) %>% summarise(sum=sum(Amount))
