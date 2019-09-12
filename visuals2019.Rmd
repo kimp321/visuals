@@ -19,18 +19,18 @@ library(plotly)
 library(DT)
 ```
 
-```{r Read Data}
+```{r Read Data, eval=FALSE}
 # 2019.xlsx
 # Sheet 1 = January
 # Sheet 2 = February
 # etc.
 
 # read in data (modify sheet parameter as desired)
-all_data <-  read.xls("2019.xlsx", sheet=6)
+all_data <-  read.xls("2019.xlsx", sheet=7)
 mydata <- all_data[,1:5]  # select columns 1 to 5
 ```
 
-```{r Combine Data, eval=FALSE}
+```{r Combine Data}
 all_data <-  read.xls("2019.xlsx", sheet=1)
 mydata <- all_data[,1:5]  # select columns 1 to 5
 
@@ -53,6 +53,12 @@ mydata <- rbind(mydata,all_data)
 all_data <-  read.xls("2019.xlsx", sheet=6)
 all_data <- all_data[,1:5]  # select columns 1 to 5
 mydata <- rbind(mydata,all_data)
+
+all_data <-  read.xls("2019.xlsx", sheet=7)
+all_data <- all_data[,1:5]  # select columns 1 to 5
+mydata <- rbind(mydata,all_data)
+
+saveRDS(mydata, file = "alldata_2019")
 ```
 
 ```{r Data Details, eval=FALSE}
@@ -69,11 +75,11 @@ rent <- mydata %>% filter(Category =="Rent") %>% select(Amount) %>% sum()
 spent <- mydata %>% filter(Type == "Sale" | Type =="Return") %>% select(Amount) %>% sum()
 savings <- round(sum(income, rent, spent),2)
 
-cat("For this month, you...", "\n",
+cat("You...", "\n",
     "made: ", income, "\n",
-    "paid rent: ", rent, "\n",
+    "saved: ", savings, "\n",
     "spent: ", spent, "\n",
-    "saved: ", savings
+    "paid rent: ", rent
     )
 ```
 
@@ -127,7 +133,7 @@ ggplot(data=income2 %>% select(Category, Amount, AmountCompany)) +
 ggplot(data=income2, aes(x=Post.Date, y=Amount, color=Category, group=Category)) +
   geom_point() +
   geom_line() +
-  ggtitle("Income Payments Over Time by Company") + xlab("Company") + ylab("Amount ($)")
+  ggtitle("Income Payments Over Time by Company") + xlab("Company") + ylab("Amount ($)") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 ### Spending by Type
