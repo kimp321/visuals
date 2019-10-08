@@ -26,11 +26,11 @@ library(DT)
 # etc.
 
 # read in data (modify sheet parameter as desired)
-all_data <-  read.xls("2019.xlsx", sheet=7)
+all_data <-  read.xls("2019.xlsx", sheet=9)
 mydata <- all_data[,1:5]  # select columns 1 to 5
 ```
 
-```{r combine sheet}
+```{r combine sheet, eval=TRUE}
 get_sheets <- function(x,y){
   sheet_names <- readxl::excel_sheets("2019.xlsx")
   sheet_list <- lapply(sheet_names[x:y], function(.sheet){gdata::read.xls("2019.xlsx", .sheet)})
@@ -39,7 +39,7 @@ get_sheets <- function(x,y){
   mydata
 }
 
-mydata <- get_sheets(1,7)
+mydata <- get_sheets(1,9)
 # saveRDS(mydata, file = "alldata_2019")
 ```
 
@@ -56,20 +56,22 @@ levels(mydata$Category)
 income <- mydata %>% filter(Type =="Income") %>% select(Amount) %>% sum()
 rent <- mydata %>% filter(Category =="Rent") %>% select(Amount) %>% sum()
 spent <- mydata %>% filter(Type == "Sale" | Type =="Return") %>% select(Amount) %>% sum()
-savings <- round(sum(income, rent, spent),2)
+ed <- mydata %>% filter(Type == "Education") %>% select(Amount) %>% sum()
+savings <- round(sum(income, rent, spent, ed),2)
 
 cat("You...", "\n",
     "made: ", income, "\n",
     "saved: ", savings, "\n",
     "spent: ", spent, "\n",
-    "paid rent: ", rent
+    "paid rent: ", rent, "\n",
+    "paid education: ", ed
     )
 ```
 
 ```{r}
 # Pie Chart with Percentages
-slices <- c(rent+spent,savings)
-lbls <- c("spent", "saved")
+slices <- c(rent+spent,savings,ed)
+lbls <- c("spent", "saved", "education")
 pct <- round(abs(slices)/sum(abs(slices))*100)
 lbls <- paste(lbls, pct) # add percents to labels
 lbls <- paste(lbls,"%",sep="") # ad % to labels
@@ -133,28 +135,28 @@ ggplot(data=income2, aes(x=Post.Date, y=Amount, color=Category, group=Category))
 ```
 
 ### Spending by Type
-```{r Income vs Rent vs Sale vs Saved}
+```{r Income vs Rent vs Sale vs Saved vs Ed}
 # Create dataframe with Total Amount and Type (e.g. Income, Rent, Saved, Sale)
-data_summary <- data.frame("Type" = c("Income", "Rent", "Sale", "Saved"),
-                      "TotalAmount" = c(income, rent, spent, savings))
+data_summary <- data.frame("Type" = c("Income", "Rent", "Education", "Sale", "Saved"),
+                      "TotalAmount" = c(income, rent, ed, spent, savings))
 
-# Visualize Income, Rent, Sale, Saved
+# Visualize Income, Rent, Sale, Saved, Ed
 ggplot(data=data_summary) + 
   geom_bar(aes(x=Type, y=abs(TotalAmount), fill=Type), stat="identity") +
   geom_text(aes(x=Type, y=abs(TotalAmount) + 100), label=data_summary$TotalAmount) +
   ggtitle("Total Amount by Type") + xlab("Type") + ylab("Amount ($)")
 
-# Change Rent Type to Sale Type
-data_summary$Type2 <- ifelse(data_summary$Type=="Income", "Income", 
-                                 ifelse(data_summary$Type=="Saved", "Saved",
+# Change Rent and Ed Type to Sale Type
+data_summary$Type2 <- ifelse(data_summary$Type=="Income", "Income", ifelse(data_summary$Type=="Saved", "Saved",
                                  "Sale"))
-# Visualize Income, Rent + Sale, Saved
+
+# Visualize Income, Rent + Sale + Ed, Saved
 ggplot(data=data_summary) + 
   geom_bar(aes(x=Type2, y=abs(TotalAmount), fill=Type2), stat="identity") +
   annotate(geom = 'text', label = income, x = "Income", y = income+100) +
   annotate(geom = 'text', label = round(sum(rent, spent),2), x = "Sale", y = abs(round(sum(rent,spent),2)-100)) +
   annotate(geom = 'text', label = savings, x = "Saved", y = savings+100) +
-  ggtitle("Total Amount by Type (Rent and Sale combined)") + xlab("Type") + ylab("Amount ($)") + labs(fill="Type")
+  ggtitle("Total Amount by Type (Rent, Sale, and Ed combined)") + xlab("Type") + ylab("Amount ($)") + labs(fill="Type")
 ```
 
 ## 3. View Data 
