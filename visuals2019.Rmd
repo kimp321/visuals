@@ -111,6 +111,37 @@ p2 <- ggplotly(p)
 hide_legend(p2)
 ```
 
+
+### Category Spending by Month
+
+```{r}
+catpermonth <- mydata2
+catpermonth$month <- lubridate::month(catpermonth$Post.Date)
+catpermonth2 <- catpermonth %>% group_by(month, Category) %>% filter(Type != "Income" & Type != "Rent") %>% summarise(total = sum(Amount))
+
+p <- ggplot(data=catpermonth2, aes(x=month, y=total, color=Category))
+p + geom_point() + geom_line()
+```
+
+### Category Spending by Month (heat map version)
+```{r}
+base_size <- 9
+p +
+  geom_tile(aes(fill=Category)) +
+  scale_fill_gradient(low="white",high="steelblue")
+  # theme_grey(base_size = base_size) + 
+  # labs(x = "", y = "") +
+  # scale_x_discrete(expand = c(0, 0)) +
+  # scale_y_discrete(expand = c(0, 0)) + 
+  # opts(legend.position = "none",axis.ticks = theme_blank(), axis.text.x = theme_text(size = base_size *0.8, angle = 330, hjust = 0, colour = "grey50"))
+  
+  
+  (p <- ggplot(nba.m, aes(variable, Name)) + geom_tile(aes(fill = rescale),
++     colour = "white") + scale_fill_gradient(low = "white",
++     high = "steelblue"))
+```
+
+
 ### Income Payments by Company
 ```{r Total Income Payments by Company}
 # Visualize Income Payments and Total Income by Company
